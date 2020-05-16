@@ -151,7 +151,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="GlobalVar.cpp" />
+    <ClCompile Include="JPEG.cpp" />
     <ClCompile Include="JPEG_decoder.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="JPEG.h" />
+    <ClInclude Include="GlobalVar.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
