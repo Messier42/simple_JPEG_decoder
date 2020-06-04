@@ -136,8 +136,8 @@ bool JPEG::ReadSOF0() {
 	unsigned short temp = 0;
 	myjpg.seekg(0, ios::beg);
 
-	while (((temp = (temp << 8) | myjpg.get()) != 0xFFC0) && (temp != 0xFFD9));
-	if (temp == 0xFFC0)		// SOF0段标记代码
+	while (((temp = (temp << 8) | myjpg.get()) != 0xFFC0) && (temp!= 0xFFC1) && (temp != 0xFFC2) && (temp != 0xFFD9));
+	if (temp == 0xFFC0 || temp == 0xFFC1 || temp == 0xFFC2)		// SOF0段标记代码,有的图片相应的信息存在SOF1或SOF2段中
 	{
 		temp = myjpg.get();
 		temp = (temp << 8) + myjpg.get();
@@ -175,7 +175,7 @@ bool JPEG::ReadDQT() {
 	while (!myjpg.eof())
 	{
 		temp = 0;
-		while (((temp = (temp << 8) + myjpg.get()) != 0xFFDB) && (temp != 0xFFC0));
+		while (((temp = (temp << 8) + myjpg.get()) != 0xFFDB) && (temp != 0xFFD9));
 		if (temp == 0xFFDB) {				// DCT段标记代码
 			int size = (myjpg.get() << 8) | myjpg.get();	// 数据长度
 			size -= 2;						// 减去数据长度本身占的2字节
@@ -612,7 +612,6 @@ bool JPEG::DecodePhoto() {
 		std::cout << "DRI值不为0，无法解码" << endl;
 		return false;
 	}
-
 	if (result == false)	return false;
 
 	if (YCbCr_ratio == 0x111){	// 采用比为1:1:1时
@@ -626,6 +625,7 @@ bool JPEG::DecodePhoto() {
 
 		while (data_lp < datasize){
 			if (true == ReadPart(y, 1)&&true == ReadPart(cb, 2)&&true == ReadPart(cr, 3)){
+				
 				for (int i = 0; i < 64; i++){
 					r[i] = y[i] + 1.402*(cr[i]) + 128;
 					g[i] = y[i] - 0.34414*(cb[i]) - 0.71414*(cr[i]) + 128;

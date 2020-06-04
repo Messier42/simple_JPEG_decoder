@@ -6,7 +6,7 @@
 
 int main()
 {
-	char jpgFilename[] = "TestImgs\\Messier42.jpg";
+	char jpgFilename[] = "TestImgs\\girl.jpg";
 	JPEG jpg1 = JPEG(jpgFilename);
 
 	//jpg1.PrintInfo(); //图片信息显示
