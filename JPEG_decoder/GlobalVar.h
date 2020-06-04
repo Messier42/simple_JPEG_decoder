@@ -11,3 +11,6 @@ extern int MapCrCb(int i, int s);
 
 // ·´zĞÍ±àÂë±í
 extern int FZig[64];
+
+// IDCT
+extern double fastIDCT[8][8];

@@ -79,14 +79,14 @@ JPEG::JPEG(char* filename){
 		// 建立图片缓存区
 		if (YCbCr_ratio == 0x111)
 		{
-			int w = 0, h = 0;
+			int w = 0, h = 0;	// 宽和高包含的8*8矩阵数
 			w = jpg_width / 8;
-			if ((jpg_width % 8) > 0)w++;
+			if ((jpg_width % 8) > 0)w++;	// 补全宽
 			h = jpg_hight / 8;
-			if ((jpg_hight % 8) > 0)h++;
+			if ((jpg_hight % 8) > 0)h++;	// 补全高
 
-			mcu_w = w * 8;
-			mcu_h = h * 8;
+			mcu_w = w * 8;		// 补全后的宽
+			mcu_h = h * 8;		// 补全后的高
 			rgb_r = new int*[mcu_h];
 			rgb_g = new int*[mcu_h];
 			rgb_b = new int*[mcu_h];
@@ -99,14 +99,14 @@ JPEG::JPEG(char* filename){
 		}
 		else if (YCbCr_ratio == 0x411)
 		{
-			int w = 0, h = 0;
+			int w = 0, h = 0;	// 宽和高包含的16*16矩阵数
 			w = jpg_width / 16;
-			if ((jpg_width % 16) > 0)w++;
+			if ((jpg_width % 16) > 0)w++;	// 补全宽
 			h = jpg_hight / 16;
-			if ((jpg_hight % 16) > 0)h++;
+			if ((jpg_hight % 16) > 0)h++;	// 补全高
 
-			mcu_w = w * 16;
-			mcu_h = h * 16;
+			mcu_w = w * 16;		// 补全后的宽
+			mcu_h = h * 16;		// 补全后的高
 			rgb_r = new int*[mcu_h];
 			rgb_g = new int*[mcu_h];
 			rgb_b = new int*[mcu_h];
@@ -487,46 +487,54 @@ bool JPEG::ReadPart(double* OUT_buf, int YCbCr) {
 	}
 
 	// 读取交流分量（63个）
-	while (ww)
-	{
+	while (ww){
 		temp = x = 0;
-		for (int x1 = 0; x1 < 16; x1++) {			// 哈夫曼编码长度为1~16位
+		// 哈夫曼编码长度为1~16位
+		for (int x1 = 0; x1 < 16; x1++) {
 			if (0x0f == (df = GetBit()))
 				return false;
 			temp = (temp << 1) + df;
-			c = FindTree(temp | ((x1 + 1) << 16), color_info[YCbCr - 1][4] + 2);	// 查找交流哈夫曼表（交流0号对应2号；交流1号对应3号）
+			// 查找交流哈夫曼表（交流0号对应2号；交流1号对应3号）
+			c = FindTree(temp | ((x1 + 1) << 16), color_info[YCbCr - 1][4] + 2);
 
 			if ((c != 0xffffffff) && (c != 0)) {
 				temp = 0;
-				decode_val[sp][0] = (c & 0xf0) >> 4;	// 当前码值高4位表示当前数值前面有多少个连续的零
-				sss += decode_val[sp][0];				// 分量数 += 当前非0分量前面为0的分量数 
-				c = c & 0x0f;						// 当前码值低4位表示该交流分量数值的二进制位数
-				if (c != 0) {
+				// 当前码值高4位表示当前数值前面有多少个连续的零
+				decode_val[sp][0] = (c & 0xf0) >> 4;
+				// 分量数 += 当前非0分量前面为0的分量数	
+				sss += decode_val[sp][0];
+				// 当前码值低4位表示该交流分量数值的二进制位数
+				c = c & 0x0f;						
+				if (c != 0) {	// 交流分量值不为0
 					for (int i = 0; i < c; i++) {
 						if (0x0f == (df = GetBit()))
 							return false;
 						temp = (temp << 1) + df;
 						x++;
 					}
-					decode_val[sp++][1] = this->FindTable(temp, x);	// 查找直流分量对应的数值
-					sss++;							// 分量数 += 1
-					if ((sss == 64) || (sp > 63))	// 当已经读入63个交流变量时停止读入交流变量
+					// 查找直流分量对应的数值
+					decode_val[sp++][1] = this->FindTable(temp, x);
+					sss++;	// 分量数 += 1
+					// 当已经读入63个交流变量时停止读入交流变量
+					if ((sss == 64) || (sp > 63))
 						ww = 0;
 					break;
 				}
-				else if (c == 0) {
-					decode_val[sp++][1] = 0;			// 交流分量值为0
-					sss++;							// 分量数 += 1
-					if ((sss == 64) || (sp > 63))	// 当已经读入63个交流变量时停止读入交流变量
+				else if (c == 0) {	// 交流分量值为0
+					decode_val[sp++][1] = 0;			
+					sss++;	// 分量数 += 1
+					// 当已经读入63个交流变量时停止读入交流变量
+					if ((sss == 64) || (sp > 63))
 						ww = 0;
 					break;
 				}
 			}
-			else if (c == 0) {						// 当前码值为0说明往后交流变量全为0，无需再读入交流分量
+			// 当前码值为0说明往后交流变量全为0，无需再读入交流分量
+			else if (c == 0) {
 				ww = 0;
 				break;
 			}
-
+			// 编码长度不可能大于16位
 			if (x1 == 15)
 				return false;
 		}
@@ -574,12 +582,19 @@ bool JPEG::ReadPart(double* OUT_buf, int YCbCr) {
 	}
 
 	// 5.反余弦变换IDCT
+	double Temp_buf[8][8] = { 0 };
+	for (int j = 0; j < 8; j++) {
+		for (int u = 0; u < 8; u++) {
+			for (int v = 0; v < 8; v++) {
+				Temp_buf[j][u] += fastIDCT[j][v] * FZ[v * 8 + u];
+			}
+		}
+	}
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++) {
 			OUT_buf[j * 8 + i] = 0;
-			for (int u = 0; u < 8; u++) {
-				for (int v = 0; v < 8; v++) {
-					OUT_buf[j * 8 + i] += C(u)*C(v) / 4 * cos((2 * i + 1)*u*PI / 16) * cos((2 * j + 1)*v*PI / 16) * FZ[v * 8 + u];
+			for (int u = 0; u < 8; u++) { {
+					OUT_buf[j * 8 + i] += fastIDCT[i][u] * Temp_buf[j][u];
 				}
 			}
 		}
@@ -609,51 +624,38 @@ bool JPEG::DecodePhoto() {
 		int b[64] = { 0 };
 		data_lp = 0;
 
-		while (data_lp < datasize)
-		{
-			if (true == ReadPart(y, 1))//y
-				if (true == ReadPart(cb, 2))//b
-					if (true == ReadPart(cr, 3))//r顺序一定不要反了
-					{
-						for (int i = 0; i < 64; i++)
-						{
-							r[i] = y[i] + 1.402*(cr[i]) + 128;
-							g[i] = y[i] - 0.34414*(cb[i]) - 0.71414*(cr[i]) + 128;
-							b[i] = y[i] + 1.772*(cb[i]) + 128;
-							if (r[i] > 255)r[i] = 255;
-							if (g[i] > 255)g[i] = 255;
-							if (b[i] > 255)b[i] = 255;
-							if (r[i] < 0)r[i] = 0;
-							if (g[i] < 0)g[i] = 0;
-							if (b[i] < 0)b[i] = 0;
-						}
-
-						for (int y = 0; y < 8; y++)
-						{
-							for (int x = 0; x < 8; x++)
-							{
-								this->rgb_r[mcu_y + y][mcu_x + x] = r[y * 8 + x];
-								this->rgb_g[mcu_y + y][mcu_x + x] = g[y * 8 + x];
-								this->rgb_b[mcu_y + y][mcu_x + x] = b[y * 8 + x];
-							}
-						}
-
-						mcu_x += 8;
-						if (mcu_x >= (mcu_w - 1))
-						{
-							mcu_x = 0;
-							mcu_y += 8;
-							if (mcu_y >= (mcu_h - 1))
-							{
-								result = true;
-								return true;
-							}
-						}
+		while (data_lp < datasize){
+			if (true == ReadPart(y, 1)&&true == ReadPart(cb, 2)&&true == ReadPart(cr, 3)){
+				for (int i = 0; i < 64; i++){
+					r[i] = y[i] + 1.402*(cr[i]) + 128;
+					g[i] = y[i] - 0.34414*(cb[i]) - 0.71414*(cr[i]) + 128;
+					b[i] = y[i] + 1.772*(cb[i]) + 128;
+					if (r[i] > 255)r[i] = 255;
+					if (g[i] > 255)g[i] = 255;
+					if (b[i] > 255)b[i] = 255;
+					if (r[i] < 0)r[i] = 0;
+					if (g[i] < 0)g[i] = 0;
+					if (b[i] < 0)b[i] = 0;
+				}
+				// 恢复成8*8矩阵
+				for (int y = 0; y < 8; y++){
+					for (int x = 0; x < 8; x++){
+						this->rgb_r[mcu_y + y][mcu_x + x] = r[y * 8 + x];
+						this->rgb_g[mcu_y + y][mcu_x + x] = g[y * 8 + x];
+						this->rgb_b[mcu_y + y][mcu_x + x] = b[y * 8 + x];
 					}
-					else
-						return false;
-				else
-					return false;
+				}
+				// 每次长、宽均移动8个像素
+				mcu_x += 8;
+				if (mcu_x >= (mcu_w - 1)){
+					mcu_x = 0;
+					mcu_y += 8;
+					if (mcu_y >= (mcu_h - 1)){	// 读取结束
+						result = true;
+						return true;
+					}
+				}
+			}		
 			else
 				return false;
 		}
@@ -670,68 +672,53 @@ bool JPEG::DecodePhoto() {
 		int uu = 0;
 		data_lp = 0;
 
-		while (data_lp < datasize)
-		{
-			if (true == ReadPart(y[0], 1))						// y1
-				if (true == ReadPart(y[1], 1))					// y2
-					if (true == ReadPart(y[2], 1))				// y3
-						if (true == ReadPart(y[3], 1))			// y4
-							if (true == ReadPart(cb, 2))		// b
-								if (true == ReadPart(cr, 3))	// r
-								{
-									for (int n = 0; n < 4; n++)
-									{
-										for (int i = 0; i < 64; i++)
-										{
-											uu = MapCrCb(i, n);
-											r[n][i] = y[n][i] + 1.402*(cr[uu]) + 128;
-											g[n][i] = y[n][i] - 0.34414*(cb[uu]) - 0.71414*(cr[uu]) + 128;
-											b[n][i] = y[n][i] + 1.772*(cb[uu]) + 128;
-											if (r[n][i] > 255)r[n][i] = 255;
-											if (g[n][i] > 255)g[n][i] = 255;
-											if (b[n][i] > 255)b[n][i] = 255;
-											if (r[n][i] < 0)r[n][i] = 0;
-											if (g[n][i] < 0)g[n][i] = 0;
-											if (b[n][i] < 0)b[n][i] = 0;
-										}
-									}
-
-									for (int y = 0; y < 8; y++)
-									{
-										for (int x = 0; x < 8; x++)
-										{
-											this->rgb_r[mcu_y + y][mcu_x + x] = r[0][y * 8 + x];
-											this->rgb_g[mcu_y + y][mcu_x + x] = g[0][y * 8 + x];
-											this->rgb_b[mcu_y + y][mcu_x + x] = b[0][y * 8 + x];
-											this->rgb_r[mcu_y + y][mcu_x + 8 + x] = r[1][y * 8 + x];
-											this->rgb_g[mcu_y + y][mcu_x + 8 + x] = g[1][y * 8 + x];
-											this->rgb_b[mcu_y + y][mcu_x + 8 + x] = b[1][y * 8 + x];
-											this->rgb_r[mcu_y + 8 + y][mcu_x + x] = r[2][y * 8 + x];
-											this->rgb_g[mcu_y + 8 + y][mcu_x + x] = g[2][y * 8 + x];
-											this->rgb_b[mcu_y + 8 + y][mcu_x + x] = b[2][y * 8 + x];
-											this->rgb_r[mcu_y + 8 + y][mcu_x + 8 + x] = r[3][y * 8 + x];
-											this->rgb_g[mcu_y + 8 + y][mcu_x + 8 + x] = g[3][y * 8 + x];
-											this->rgb_b[mcu_y + 8 + y][mcu_x + 8 + x] = b[3][y * 8 + x];
-										}
-									}
-									mcu_x += 16;
-									if (mcu_x >= (mcu_w - 1))
-									{
-										mcu_x = 0;
-										mcu_y += 16;
-										if (mcu_y >= (mcu_h - 1))
-										{
-											result = true;
-											return true;
-										}
-									}
-								}
-								else
-									return false;
-							else
-								return false;
-						else
-							return false;
+		while (data_lp < datasize){
+			if (true == ReadPart(y[0], 1)&&true == ReadPart(y[1], 1)&&true == ReadPart(y[2], 1)&&
+				true == ReadPart(y[3], 1)&&true == ReadPart(cb, 2)&&true == ReadPart(cr, 3)) {	// r
+				for (int n = 0; n < 4; n++){
+					for (int i = 0; i < 64; i++){
+						uu = MapCrCb(i, n);
+						r[n][i] = y[n][i] + 1.402*(cr[uu]) + 128;
+						g[n][i] = y[n][i] - 0.34414*(cb[uu]) - 0.71414*(cr[uu]) + 128;
+						b[n][i] = y[n][i] + 1.772*(cb[uu]) + 128;
+						if (r[n][i] > 255)r[n][i] = 255;
+						if (g[n][i] > 255)g[n][i] = 255;
+						if (b[n][i] > 255)b[n][i] = 255;
+						if (r[n][i] < 0)r[n][i] = 0;
+						if (g[n][i] < 0)g[n][i] = 0;
+						if (b[n][i] < 0)b[n][i] = 0;
+					}
+				}
+				// 恢复成8*8矩阵
+				for (int y = 0; y < 8; y++){
+					for (int x = 0; x < 8; x++){
+						this->rgb_r[mcu_y + y][mcu_x + x] = r[0][y * 8 + x];
+						this->rgb_g[mcu_y + y][mcu_x + x] = g[0][y * 8 + x];
+						this->rgb_b[mcu_y + y][mcu_x + x] = b[0][y * 8 + x];
+						this->rgb_r[mcu_y + y][mcu_x + 8 + x] = r[1][y * 8 + x];
+						this->rgb_g[mcu_y + y][mcu_x + 8 + x] = g[1][y * 8 + x];
+						this->rgb_b[mcu_y + y][mcu_x + 8 + x] = b[1][y * 8 + x];
+						this->rgb_r[mcu_y + 8 + y][mcu_x + x] = r[2][y * 8 + x];
+						this->rgb_g[mcu_y + 8 + y][mcu_x + x] = g[2][y * 8 + x];
+						this->rgb_b[mcu_y + 8 + y][mcu_x + x] = b[2][y * 8 + x];
+						this->rgb_r[mcu_y + 8 + y][mcu_x + 8 + x] = r[3][y * 8 + x];
+						this->rgb_g[mcu_y + 8 + y][mcu_x + 8 + x] = g[3][y * 8 + x];
+						this->rgb_b[mcu_y + 8 + y][mcu_x + 8 + x] = b[3][y * 8 + x];
+					}
+				}
+				// 每次长、宽均移动16个像素
+				mcu_x += 16;
+				if (mcu_x >= (mcu_w - 1)){
+					mcu_x = 0;
+					mcu_y += 16;
+					if (mcu_y >= (mcu_h - 1)){
+						result = true;
+						return true;
+					}
+				}
+			}
+			else
+				return false;
 		}
 		return false;
 	}
@@ -748,10 +735,8 @@ bool JPEG::ShowPhoto(int w_x, int w_y) {
 	}
 	HDC hdc = GetWindowDC(GetDesktopWindow());
 
-	for (int y = 0; y < jpg_hight; y++)
-	{
-		for (int x = 0; x < jpg_width; x++)
-		{
+	for (int y = 0; y < jpg_hight; y++){
+		for (int x = 0; x < jpg_width; x++){
 			SetPixel(hdc, w_x + x, w_y + y, RGB(rgb_r[y][x], rgb_g[y][x], rgb_b[y][x]));
 		}
 	}
